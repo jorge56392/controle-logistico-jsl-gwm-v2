@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Painel Vivo JSL</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:Arial;background:#f1f5f9;margin:0;padding:20px}
+header{background:#d90429;color:#fff;padding:20px;border-radius:14px}
+.card{background:#fff;padding:20px;border-radius:14px;margin-top:20px;box-shadow:0 2px 10px #0001}
+input,button{padding:12px;border-radius:10px;border:1px solid #ccc;width:100%;margin-top:10px}
+button{background:#d90429;color:#fff;font-weight:bold;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin-top:20px;background:#fff}
+th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}
+th{background:#111827;color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Painel Vivo JSL • Supabase Online</h1>
+<p>Atualização em tempo real</p>
+</header>
+
+<div class="card">
+<h2>Registrar Container</h2>
+<input id="container" placeholder="Container">
+<input id="batch" placeholder="Batch">
+<input id="doca" placeholder="Doca">
+<button onclick="salvar()">Salvar</button>
+</div>
+
+<div class="card">
+<h2>Containers em tempo real</h2>
+<table>
+<thead>
+<tr>
+<th>Container</th>
+<th>Batch</th>
+<th>Doca</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+
+<script>
+const supabaseUrl = "COLE_AQUI_SUA_SUPABASE_URL";
+const supabaseKey = "COLE_AQUI_SUA_SUPABASE_ANON_KEY";
+
+const client = supabase.createClient(supabaseUrl, supabaseKey);
+
+async function salvar(){
+  const container = document.getElementById('container').value;
+  const batch = document.getElementById('batch').value;
+  const doca = document.getElementById('doca').value;
+
+  if(!container || !batch || !doca){
+    alert('Preencha tudo');
+    return;
+  }
+
+  const { error } = await client
+    .from('recebimento')
+    .insert([
+      {
+        container,
+        batch,
+        doca,
+        status:'Recebido'
+      }
+    ]);
+
+  if(error){
+    alert('Erro: '+error.message);
+    return;
+  }
+
+  document.getElementById('container').value='';
+  document.getElementById('batch').value='';
+  document.getElementById('doca').value='';
+
+  carregar();
+}
+
+async function carregar(){
+  const { data } = await client
+    .from('recebimento')
+    .select('*')
+    .order('id',{ascending:false});
+
+  document.getElementById('tbody').innerHTML = data.map(r=>`
+    <tr>
+      <td>${r.container}</td>
+      <td>${r.batch}</td>
+      <td>${r.doca}</td>
+      <td>${r.status}</td>
+    </tr>
+  `).join('');
+}
+
+client
+.channel('painel-vivo')
+.on(
+  'postgres_changes',
+  {
+    event:'*',
+    schema:'public',
+    table:'recebimento'
+  },
+  ()=>{
+    carregar();
+  }
+)
+.subscribe();
+
+carregar();
+</script>
+
+</body>
+</html>
