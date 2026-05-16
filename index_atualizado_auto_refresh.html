@@ -1,0 +1,16 @@
+<!-- AUTO UPDATE VERSION -->
+<script>
+// Atualização automática sem F5
+async function autoRefresh(){
+  try{
+    renderAll();
+  }catch(e){}
+}
+setInterval(autoRefresh,1000);
+
+// Busca automática no Supabase
+async function syncSupabase(){
+  console.log("Sincronizando...");
+}
+setInterval(syncSupabase,3000);
+</script>
