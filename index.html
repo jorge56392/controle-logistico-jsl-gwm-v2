@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSL - Controle Logístico de Materiais V2</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --red:#e30613;
+  --dark:#1f2937;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --green:#16a34a;
+  --blue:#2563eb;
+  --yellow:#f59e0b;
+  --bg:#f7f8fa;
+}
+* {box-sizing:border-box}
+body {margin:0;font-family:Arial, Helvetica, sans-serif;background:var(--bg);color:#111827}
+.header {
+  height:92px;background:white;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10
+}
+.logo {display:flex;align-items:center;gap:12px;min-width:260px}
+.logo-mark {
+  width:58px;height:58px;border-radius:50%;background:var(--red);color:white;
+  display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900
+}
+.logo-text strong {font-size:42px;font-style:italic;color:#555;letter-spacing:-2px}
+.logo-text div {font-size:10px;color:#555;margin-top:-8px}
+.title {text-align:center;flex:1}
+.title h1 {margin:0;font-size:26px;letter-spacing:.5px}
+.v2 {background:var(--red);color:white;border-radius:6px;padding:2px 8px;font-size:18px}
+.title p {margin:4px 0 0;color:#4b5563;font-size:13px}
+.clock {display:flex;align-items:center;gap:14px;min-width:260px;justify-content:flex-end}
+.tv-btn {border:1px solid var(--red);background:white;color:var(--red);border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}
+.user {font-size:13px;text-align:right}
+.nav {
+  display:flex;gap:6px;background:white;padding:0 22px;border-bottom:1px solid var(--line);
+  overflow:auto;position:sticky;top:92px;z-index:9
+}
+.tab {
+  border:0;background:white;padding:18px 22px;border-bottom:3px solid transparent;
+  font-weight:700;color:#4b5563;cursor:pointer;white-space:nowrap
+}
+.tab.active {color:var(--red);border-bottom-color:var(--red)}
+main {padding:20px;display:grid;gap:16px}
+.cards {display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:14px}
+.card {
+  background:white;border:1px solid var(--line);border-radius:12px;padding:16px;
+  box-shadow:0 3px 12px rgba(0,0,0,.04)
+}
+.metric {display:flex;align-items:center;gap:14px}
+.icon {font-size:30px}
+.metric h3 {margin:0;font-size:12px;color:#111827}
+.metric b {font-size:28px}
+.metric small {color:var(--muted)}
+.panel {background:white;border:1px solid var(--line);border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.04);overflow:hidden}
+.panel-head {padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap}
+.panel-head h2 {margin:0;color:var(--red);font-size:16px}
+.actions {display:flex;gap:8px;flex-wrap:wrap}
+.btn {border:1px solid var(--line);background:#f9fafb;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
+.btn.red {background:var(--red);color:white;border-color:var(--red)}
+.btn.green {background:#13a85b;color:white;border-color:#13a85b}
+.btn.blue {background:#eff6ff;color:var(--blue);border-color:#93c5fd}
+.btn.yellow {background:#fffbeb;color:#92400e;border-color:#fbbf24}
+.table-wrap {overflow:auto}
+table {width:100%;border-collapse:collapse;font-size:13px}
+th,td {padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th {background:#fafafa;font-size:12px;color:#111827}
+.badge {display:inline-block;border-radius:7px;padding:5px 9px;border:1px solid #d1d5db;background:#f9fafb;font-size:12px}
+.ok {background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+.warn {background:#fffbeb;color:#b45309;border-color:#fcd34d}
+.info {background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}
+.danger {background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+.hidden {display:none!important}
+.form-grid {display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:10px;padding:16px;border-bottom:1px solid var(--line);background:#fcfcfc}
+input,select,textarea {
+  width:100%;border:1px solid #d1d5db;border-radius:8px;padding:10px;background:white;font-size:14px
+}
+textarea {min-height:40px}
+.split {display:grid;grid-template-columns:1fr 330px;gap:16px}
+.side-list {display:grid;gap:10px}
+.activity {display:flex;gap:10px;border-bottom:1px solid var(--line);padding:10px 0}
+.activity:last-child {border-bottom:0}
+.dot {width:12px;height:12px;border-radius:50%;background:var(--green);margin-top:3px;flex:0 0 12px}
+.footer {text-align:center;color:#6b7280;font-size:12px;padding:12px}
+.kpis-inline {display:flex;gap:8px;flex-wrap:wrap}
+.progress {height:8px;background:#eee;border-radius:99px;overflow:hidden;width:150px}
+.bar {height:100%;background:var(--green);width:0%}
+.tv-mode .nav, .tv-mode .form-grid, .tv-mode .actions .editOnly, .tv-mode .footer {display:none!important}
+.tv-mode .header {height:76px}
+.tv-mode .title h1 {font-size:30px}
+.tv-mode main {padding:12px}
+.tv-mode .cards {grid-template-columns:repeat(5,1fr)}
+@media(max-width:1050px) {
+  .cards {grid-template-columns:repeat(2,1fr)}
+  .split {grid-template-columns:1fr}
+  .header {height:auto;flex-wrap:wrap}
+  .nav {top:120px}
+  .form-grid {grid-template-columns:1fr}
+  .logo-text strong {font-size:32px}
+}
+@media(max-width:650px) {
+  .cards {grid-template-columns:1fr}
+  .title h1 {font-size:18px}
+  .clock {min-width:100%;justify-content:space-between}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">S</div>
+    <div class="logo-text"><strong>JSL</strong><div>ENTENDER PARA ATENDER</div></div>
+  </div>
+  <div class="title">
+    <h1>CONTROLE LOGÍSTICO DE MATERIAIS <span class="v2">V2</span></h1>
+    <p>Sistema de Gestão de Fluxo de Materiais</p>
+  </div>
+  <div class="clock">
+    <div><b id="hora">--:--:--</b><br><span id="dataHoje" style="color:#6b7280;font-size:13px"></span></div>
+    <button class="tv-btn" onclick="toggleTV()">▣ TELA TV</button>
+    <div class="user"><b>Admin</b><br><span style="color:#6b7280">Administrador</span></div>
+  </div>
+</header>
+
+<nav class="nav">
+  <button class="tab active" onclick="showTab('lotes')">📦 LOTES</button>
+  <button class="tab" onclick="showTab('uploads')">☁️ UPLOADS</button>
+  <button class="tab" onclick="showTab('portaria')">🚚 PORTARIA</button>
+  <button class="tab" onclick="showTab('recebimento')">📋 RECEBIMENTO</button>
+  <button class="tab" onclick="showTab('unpacking')">📦 UNPACKING</button>
+  <button class="tab" onclick="showTab('producao')">🏭 PRODUÇÃO</button>
+  <button class="tab" onclick="showTab('historico')">↺ HISTÓRICO</button>
+  <button class="tab" onclick="showTab('cadastros')">⚙️ CADASTROS</button>
+  <button class="tab" onclick="showTab('usuarios')">👥 USUÁRIOS</button>
+  <button class="tab" onclick="showTab('config')">☷ CONFIG.</button>
+</nav>
+
+<main>
+  <section class="cards">
+    <div class="card metric"><div class="icon">📦</div><div><h3>TOTAL DE LOTES</h3><b id="kpiTotal">0</b><br><small>Todos os lotes cadastrados</small></div></div>
+    <div class="card metric"><div class="icon">🗓️</div><div><h3>PLANEJADOS</h3><b id="kpiPlanejados">0</b><br><small>Aguardando liberação</small></div></div>
+    <div class="card metric"><div class="icon">🚚</div><div><h3>EM ANDAMENTO</h3><b id="kpiAndamento">0</b><br><small>Processos em andamento</small></div></div>
+    <div class="card metric"><div class="icon">✅</div><div><h3>CONCLUÍDOS</h3><b id="kpiConcluidos">0</b><br><small>Processos finalizados</small></div></div>
+    <div class="card metric"><div class="icon">⚠️</div><div><h3>PARCIAL / NÃO IDEAL</h3><b id="kpiParcial">0</b><br><small>Planejado menor que total</small></div></div>
+    <div class="card metric"><div class="icon">📊</div><div><h3>PROGRESSO GERAL</h3><b id="kpiProgresso">0%</b><div class="progress"><div class="bar" id="barProgresso"></div></div></div></div>
+  </section>
+
+  <section id="tab-lotes" class="tabpage split">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>LOTES CADASTRADOS</h2>
+        <div class="actions">
+          <button class="btn green editOnly" onclick="showTab('uploads')">+ NOVO LOTE</button>
+          <button class="btn blue" onclick="exportCSV()">▣ EXPORTAR CSV</button>
+          <button class="btn" onclick="carregarTudo()">⟳ ATUALIZAR</button>
+          <input id="busca" placeholder="Filtrar lote, modelo, cliente..." oninput="render()" style="width:230px">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Lote</th><th>Cliente</th><th>Modelo</th><th>Total</th><th>Planejado</th>
+              <th>Uploads</th><th>Portaria</th><th>Recebimento</th><th>Unpacking</th><th>Produção</th><th>Status</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyLotes"></tbody>
+        </table>
+      </div>
+    </div>
+    <aside class="side-list">
+      <div class="card"><h3>ATIVIDADES RECENTES</h3><div id="atividades"></div></div>
+      <div class="card"><h3>ALERTAS</h3><div id="alertas"></div></div>
+    </aside>
+  </section>
+
+  <section id="tab-uploads" class="tabpage hidden panel">
+    <div class="panel-head"><h2>UPLOADS / PLANEJAMENTO</h2><div class="actions"><button class="btn green" onclick="salvarLote()">SALVAR LOTE</button></div></div>
+    <div class="form-grid">
+      <input id="lote" placeholder="Lote Ex: BHE4060">
+      <input id="cliente" placeholder="Cliente Ex: JSL">
+      <select id="modelo"><option value="">Modelo</option><option>P11</option><option>P30</option><option>B01/B03</option></select>
+      <input id="total" type="number" placeholder="Total containers do lote">
+      <input id="planejado" type="number" placeholder="Nº que será descarregado">
+      <input id="dataPlanejada" type="date">
+      <input id="prioridade" type="number" placeholder="Prioridade">
+      <input id="obsLote" placeholder="Observação">
+    </div>
+    <div style="padding:16px">
+      <b>Regra:</b> parcial pode acontecer, mas o painel marca como <span class="badge warn">NÃO IDEAL</span>. Lote só conclui quando todos os containers do lote forem finalizados.
+    </div>
+  </section>
+
+  <section id="tab-portaria" class="tabpage hidden panel">
+    <div class="panel-head"><h2>PORTARIA</h2><div class="actions"><button class="btn green" onclick="salvarContainer('PORTARIA')">CADASTRAR CHEGADA</button></div></div>
+    <div class="form-grid">
+      <input id="container_no" placeholder="Container No.">
+      <input id="container_lote" placeholder="Lote Ex: BHE4060">
+      <input id="batch" placeholder="Batch">
+      <select id="container_modelo"><option value="">Modelo</option><option>P11</option><option>P30</option><option>B01/B03</option></select>
+      <input id="posicao_recuo" placeholder="Posição/Recuo">
+      <input id="obsContainer" placeholder="Observação">
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Container</th><th>Lote</th><th>Doca</th><th>Status</th><th>Recuo</th><th>Ação</th></tr></thead><tbody id="tbodyPortaria"></tbody></table></div>
+  </section>
+
+  <section id="tab-recebimento" class="tabpage hidden panel">
+    <div class="panel-head"><h2>RECEBIMENTO</h2><div class="actions"><button class="btn" onclick="carregarTudo()">⟳ ATUALIZAR</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Container</th><th>Lote</th><th>Doca</th><th>Status</th><th>Parcial</th><th>Ações</th></tr></thead><tbody id="tbodyRecebimento"></tbody></table></div>
+  </section>
+
+  <section id="tab-unpacking" class="tabpage hidden panel">
+    <div class="panel-head"><h2>UNPACKING</h2><div class="actions"><input id="carrosFaltantes" type="number" placeholder="Carros faltantes p/ produção" style="width:230px"><button class="btn yellow" onclick="avaliarRiscoUnpacking()">AVALIAR RISCO</button></div></div>
+    <div style="padding:16px">Critério: faltam <b>46 carros</b> = dentro do prazo. Faltam <b>45 carros</b> = fora do prazo.</div>
+    <div class="table-wrap"><table><thead><tr><th>Container</th><th>Lote</th><th>Status</th><th>Risco</th><th>Ações</th></tr></thead><tbody id="tbodyUnpacking"></tbody></table></div>
+  </section>
+
+  <section id="tab-producao" class="tabpage hidden panel">
+    <div class="panel-head"><h2>PRODUÇÃO</h2><div class="actions"><button class="btn" onclick="carregarTudo()">⟳ ATUALIZAR</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Container</th><th>Lote</th><th>Modelo</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbodyProducao"></tbody></table></div>
+  </section>
+
+  <section id="tab-historico" class="tabpage hidden panel">
+    <div class="panel-head"><h2>HISTÓRICO</h2><div class="actions"><button class="btn blue" onclick="exportHistorico()">EXPORTAR HISTÓRICO</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Data/Hora</th><th>Área</th><th>Lote</th><th>Container</th><th>Evento</th><th>Status</th><th>Usuário</th><th>Obs</th></tr></thead><tbody id="tbodyHistorico"></tbody></table></div>
+  </section>
+
+  <section id="tab-cadastros" class="tabpage hidden panel">
+    <div class="panel-head"><h2>CADASTROS / DOCAS</h2><div class="actions"><button class="btn green" onclick="salvarDoca()">SALVAR DOCA</button></div></div>
+    <div class="form-grid"><input id="docaCodigo" placeholder="Código da doca"><input id="docaDescricao" placeholder="Descrição"><input id="docaArea" placeholder="Área"></div>
+    <div class="table-wrap"><table><thead><tr><th>Doca</th><th>Descrição</th><th>Área</th><th>Ativo</th></tr></thead><tbody id="tbodyDocas"></tbody></table></div>
+  </section>
+
+  <section id="tab-usuarios" class="tabpage hidden panel">
+    <div class="panel-head"><h2>USUÁRIOS</h2><div class="actions"><button class="btn green" onclick="salvarUsuario()">SALVAR USUÁRIO</button></div></div>
+    <div class="form-grid"><input id="usuarioNome" placeholder="Nome"><input id="usuarioArea" placeholder="Área"><select id="usuarioPerfil"><option>OPERADOR</option><option>ADMIN</option><option>TV</option></select></div>
+    <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Área</th><th>Perfil</th><th>Ativo</th></tr></thead><tbody id="tbodyUsuarios"></tbody></table></div>
+  </section>
+
+  <section id="tab-config" class="tabpage hidden panel">
+    <div class="panel-head"><h2>CONFIGURAÇÕES</h2></div>
+    <div style="padding:16px;line-height:1.8">
+      <b>Atualização automática:</b> ativa a cada 3 segundos + realtime do Supabase.<br>
+      <b>Mapeamento fixo:</b> BHE/BHD/BHC/BHF → 140B | BPU/BFB/BPT → 132 | Containers 1-4 → Welding | 13-14 → 140C.<br>
+      <b>Sem mapeamento:</b> Inserir doca.<br>
+      <b>Regra operacional:</b> lote completo é o ideal, mas parcial pode ser executado e marcado como não ideal.
+    </div>
+  </section>
+
+  <div class="footer">© JSL - Entender para Atender | Sistema de Controle Logístico de Materiais V2</div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://pyuxuzziumrwayimksnn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_DNzXpwHaxyRayolexP75yA_MhBZXx-3";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let state = { lotes:[], containers:[], processos:[], historico:[], docas:[], usuarios:[] };
+
+function setClock(){
+  const d = new Date();
+  document.getElementById('hora').textContent = d.toLocaleTimeString('pt-BR');
+  document.getElementById('dataHoje').textContent = d.toLocaleDateString('pt-BR');
+}
+setInterval(setClock,1000); setClock();
+
+function showTab(name){
+  document.querySelectorAll('.tabpage').forEach(e=>e.classList.add('hidden'));
+  document.querySelector('#tab-'+name).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  event?.target?.classList.add('active');
+}
+
+function toggleTV(){
+  document.body.classList.toggle('tv-mode');
+  showTab('lotes');
+}
+
+function badge(t, cls=''){ return `<span class="badge ${cls}">${t||'PENDENTE'}</span>`; }
+function statusClass(s){
+  s = (s||'').toUpperCase();
+  if(s.includes('CONCLU') || s.includes('LIBERADO') || s.includes('FINALIZADO')) return 'ok';
+  if(s.includes('ANDAMENTO') || s.includes('RECEBIMENTO') || s.includes('DESCARGA')) return 'info';
+  if(s.includes('PARCIAL') || s.includes('RISCO') || s.includes('PLANEJADO')) return 'warn';
+  if(s.includes('ATRASO') || s.includes('CANCEL')) return 'danger';
+  return '';
+}
+function fmtDate(v){ return v ? new Date(v).toLocaleString('pt-BR') : ''; }
+
+async function carregarTudo(){
+  const [lotes, containers, processos, historico, docas, usuarios] = await Promise.all([
+    db.from('planejamento_lotes').select('*').order('prioridade', {ascending:true}).order('created_at', {ascending:false}),
+    db.from('containers').select('*').order('created_at', {ascending:false}),
+    db.from('processos_lote').select('*'),
+    db.from('historico_eventos').select('*').order('created_at', {ascending:false}).limit(200),
+    db.from('docas').select('*').order('codigo'),
+    db.from('usuarios_app').select('*').order('created_at', {ascending:false})
+  ]);
+  for (const r of [lotes,containers,processos,historico,docas,usuarios]) if(r.error) console.error(r.error);
+  state = {
+    lotes:lotes.data||[], containers:containers.data||[], processos:processos.data||[],
+    historico:historico.data||[], docas:docas.data||[], usuarios:usuarios.data||[]
+  };
+  render();
+}
+
+function render(){
+  const busca = (document.getElementById('busca')?.value||'').toLowerCase();
+  const lotes = state.lotes.filter(l => JSON.stringify(l).toLowerCase().includes(busca));
+  const total = state.lotes.length;
+  const concluidos = state.lotes.filter(l=>(l.status_geral||'').includes('CONCLUÍDO')).length;
+  const andamento = state.lotes.filter(l=>(l.status_geral||'').includes('ANDAMENTO')).length;
+  const parciais = state.lotes.filter(l=>Number(l.planejado_descarregar)<Number(l.total_containers)).length;
+  const planejados = total - concluidos - andamento;
+  const progresso = total ? Math.round((concluidos/total)*100) : 0;
+  kpiTotal.textContent=total; kpiPlanejados.textContent=planejados; kpiAndamento.textContent=andamento;
+  kpiConcluidos.textContent=concluidos; kpiParcial.textContent=parciais; kpiProgresso.textContent=progresso+'%'; barProgresso.style.width=progresso+'%';
+
+  tbodyLotes.innerHTML = lotes.map(l => {
+    const p = state.processos.find(x=>x.lote===l.lote)||{};
+    return `<tr>
+      <td><b>${l.lote}</b></td><td>${l.cliente||''}</td><td>${l.modelo||''}</td>
+      <td>${l.total_containers}</td><td>${l.planejado_descarregar}</td>
+      <td>${badge(p.uploads_status,'ok')}</td><td>${badge(p.portaria_status,statusClass(p.portaria_status))}</td>
+      <td>${badge(p.recebimento_status,statusClass(p.recebimento_status))}</td>
+      <td>${badge(p.unpacking_status,statusClass(p.unpacking_status))}</td>
+      <td>${badge(p.producao_status,statusClass(p.producao_status))}</td>
+      <td>${badge(l.status_geral,statusClass(l.status_geral))}</td>
+      <td><button class="btn" onclick="excluirLote('${l.lote}')">🗑️</button></td>
+    </tr>`;
+  }).join('');
+
+  tbodyPortaria.innerHTML = state.containers.map(c=>`<tr><td>${c.container_no}</td><td>${c.lote}</td><td>${c.doca}</td><td>${badge(c.status,statusClass(c.status))}</td><td>${c.posicao_recuo||''}</td><td><button class="btn blue" onclick="moverContainer('${c.container_no}','RECEBIMENTO','EM RECEBIMENTO')">Liberar p/ Recebimento</button></td></tr>`).join('');
+  tbodyRecebimento.innerHTML = state.containers.map(c=>`<tr><td>${c.container_no}</td><td>${c.lote}</td><td>${c.doca}</td><td>${badge(c.status,statusClass(c.status))}</td><td>${c.parcial?badge('SIM - NÃO IDEAL','warn'):badge('NÃO','ok')}</td><td><button class="btn yellow" onclick="moverContainer('${c.container_no}','UNPACKING','DESCARREGADO')">Descarregado</button> <button class="btn blue" onclick="moverContainer('${c.container_no}','RECEBIMENTO','EM DESCARGA')">Em descarga</button></td></tr>`).join('');
+  tbodyUnpacking.innerHTML = state.containers.map(c=>`<tr><td>${c.container_no}</td><td>${c.lote}</td><td>${badge(c.status,statusClass(c.status))}</td><td>${c.parcial?badge('PARCIAL NÃO IDEAL','warn'):badge('OK','ok')}</td><td><button class="btn blue" onclick="moverContainer('${c.container_no}','PRODUÇÃO','UNPACKING CONCLUÍDO')">Finalizar Unpacking</button></td></tr>`).join('');
+  tbodyProducao.innerHTML = state.containers.map(c=>`<tr><td>${c.container_no}</td><td>${c.lote}</td><td>${c.modelo||''}</td><td>${badge(c.status,statusClass(c.status))}</td><td><button class="btn green" onclick="moverContainer('${c.container_no}','PRODUÇÃO','FINALIZADO')">Finalizar Produção</button></td></tr>`).join('');
+
+  tbodyHistorico.innerHTML = state.historico.map(h=>`<tr><td>${fmtDate(h.created_at)}</td><td>${h.area||''}</td><td>${h.lote||''}</td><td>${h.container_no||''}</td><td>${h.evento}</td><td>${h.status_novo||''}</td><td>${h.usuario||''}</td><td>${h.observacao||''}</td></tr>`).join('');
+  tbodyDocas.innerHTML = state.docas.map(d=>`<tr><td>${d.codigo}</td><td>${d.descricao||''}</td><td>${d.area||''}</td><td>${d.ativo?'Sim':'Não'}</td></tr>`).join('');
+  tbodyUsuarios.innerHTML = state.usuarios.map(u=>`<tr><td>${u.nome}</td><td>${u.area||''}</td><td>${u.perfil||''}</td><td>${u.ativo?'Sim':'Não'}</td></tr>`).join('');
+
+  atividades.innerHTML = state.historico.slice(0,5).map(h=>`<div class="activity"><span class="dot"></span><div><b>${h.evento}</b><br><small>${h.lote||''} ${h.container_no||''} • ${fmtDate(h.created_at)}</small></div></div>`).join('');
+  alertas.innerHTML = `
+    <div class="activity"><span class="dot" style="background:#f59e0b"></span><div><b>${parciais} lote(s) parcial/não ideal</b><br><small>Verificar planejamento</small></div></div>
+    <div class="activity"><span class="dot" style="background:#2563eb"></span><div><b>${state.containers.filter(c=>c.status!='FINALIZADO').length} container(s) em aberto</b><br><small>Acompanhar fluxo</small></div></div>`;
+}
+
+async function salvarLote(){
+  const lote = document.getElementById('lote').value.trim().toUpperCase();
+  if(!lote) return alert('Informe o lote.');
+  const payload = {
+    lote,
+    cliente: cliente.value.trim(),
+    modelo: modelo.value,
+    total_containers: Number(total.value||0),
+    planejado_descarregar: Number(planejado.value||0),
+    data_planejada: dataPlanejada.value || null,
+    prioridade: Number(prioridade.value||0),
+    observacao: obsLote.value.trim()
+  };
+  const {error} = await db.from('planejamento_lotes').upsert(payload, {onConflict:'lote'});
+  if(error) return alert(error.message);
+  await log(lote,null,'UPLOADS','Lote salvo/atualizado',null,'PLANEJADO',payload.observacao);
+  ['lote','cliente','total','planejado','prioridade','obsLote'].forEach(id=>document.getElementById(id).value='');
+  carregarTudo();
+}
+
+async function salvarContainer(area='PORTARIA'){
+  const container_no = container_no_input();
+  const lote = document.getElementById('container_lote').value.trim().toUpperCase();
+  if(!container_no || !lote) return alert('Informe container e lote.');
+  const payload = {
+    container_no, lote,
+    batch: batch.value.trim(),
+    modelo: container_modelo.value,
+    posicao_recuo: posicao_recuo.value.trim(),
+    status:'AGUARDANDO',
+    processo_atual:area,
+    chegada_portaria_at:new Date().toISOString(),
+    observacao:obsContainer.value.trim()
+  };
+  const {error} = await db.from('containers').upsert(payload, {onConflict:'container_no'});
+  if(error) return alert(error.message);
+  await db.from('processos_lote').upsert({lote, portaria_status:'LIBERADO'}, {onConflict:'lote'});
+  await log(lote,container_no,area,'Container cadastrado na portaria',null,'AGUARDANDO',payload.observacao);
+  ['container_no','container_lote','batch','posicao_recuo','obsContainer'].forEach(id=>document.getElementById(id).value='');
+  carregarTudo();
+}
+function container_no_input(){ return document.getElementById('container_no').value.trim().toUpperCase(); }
+
+async function moverContainer(container_no, processo, status){
+  const c = state.containers.find(x=>x.container_no===container_no);
+  const now = new Date().toISOString();
+  let update = {processo_atual:processo,status};
+  if(status==='EM RECEBIMENTO'||status==='EM DESCARGA') update.inicio_recebimento_at=now;
+  if(status==='DESCARREGADO') update.fim_recebimento_at=now;
+  if(status==='UNPACKING CONCLUÍDO') update.fim_unpacking_at=now;
+  if(status==='FINALIZADO') update.finalizado_at=now;
+  const {error} = await db.from('containers').update(update).eq('container_no',container_no);
+  if(error) return alert(error.message);
+  if(c) await log(c.lote,container_no,processo,'Container movimentado',c.status,status,'Movimentação automática');
+  await atualizarProcessoLote(c?.lote);
+  carregarTudo();
+}
+
+async function atualizarProcessoLote(lote){
+  if(!lote) return;
+  const cs = state.containers.filter(c=>c.lote===lote);
+  const obj = {lote};
+  if(cs.some(c=>c.processo_atual==='RECEBIMENTO'||c.status.includes('RECEBIMENTO')||c.status==='EM DESCARGA')) obj.recebimento_status='EM ANDAMENTO';
+  if(cs.some(c=>c.status==='DESCARREGADO'||c.status.includes('UNPACKING'))) obj.recebimento_status='CONCLUÍDO';
+  if(cs.some(c=>c.status.includes('UNPACKING'))) obj.unpacking_status='CONCLUÍDO';
+  if(cs.some(c=>c.status==='FINALIZADO')) obj.producao_status='EM ANDAMENTO';
+  if(cs.length && cs.every(c=>c.status==='FINALIZADO')) obj.producao_status='CONCLUÍDO';
+  await db.from('processos_lote').upsert(obj, {onConflict:'lote'});
+}
+
+async function avaliarRiscoUnpacking(){
+  const v = Number(carrosFaltantes.value||0);
+  const risco = v <= 45 ? 'FORA DO PRAZO' : 'DENTRO DO PRAZO';
+  alert(`Risco Unpacking: ${risco}`);
+}
+
+async function salvarDoca(){
+  if(!docaCodigo.value.trim()) return alert('Informe a doca.');
+  const {error} = await db.from('docas').upsert({codigo:docaCodigo.value.trim().toUpperCase(),descricao:docaDescricao.value.trim(),area:docaArea.value.trim()},{onConflict:'codigo'});
+  if(error) return alert(error.message); carregarTudo();
+}
+async function salvarUsuario(){
+  if(!usuarioNome.value.trim()) return alert('Informe o usuário.');
+  const {error} = await db.from('usuarios_app').insert({nome:usuarioNome.value.trim(),area:usuarioArea.value.trim(),perfil:usuarioPerfil.value});
+  if(error) return alert(error.message); carregarTudo();
+}
+
+async function excluirLote(lote){
+  if(!confirm('Excluir lote '+lote+' e containers vinculados?')) return;
+  const {error} = await db.from('planejamento_lotes').delete().eq('lote',lote);
+  if(error) return alert(error.message); carregarTudo();
+}
+
+async function log(lote, container_no, area, evento, status_anterior, status_novo, observacao){
+  await db.from('historico_eventos').insert({lote,container_no,area,evento,status_anterior,status_novo,usuario:'Admin',observacao});
+}
+
+function exportCSV(){
+  const rows = [['Lote','Cliente','Modelo','Total','Planejado','Status'], ...state.lotes.map(l=>[l.lote,l.cliente,l.modelo,l.total_containers,l.planejado_descarregar,l.status_geral])];
+  downloadCSV(rows,'lotes_jsl.csv');
+}
+function exportHistorico(){
+  const rows = [['Data','Area','Lote','Container','Evento','Status','Usuario','Obs'], ...state.historico.map(h=>[fmtDate(h.created_at),h.area,h.lote,h.container_no,h.evento,h.status_novo,h.usuario,h.observacao])];
+  downloadCSV(rows,'historico_jsl.csv');
+}
+function downloadCSV(rows,name){
+  const csv = rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(';')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download=name; a.click();
+}
+
+carregarTudo();
+setInterval(carregarTudo,3000);
+db.channel('jsl-v2-realtime')
+  .on('postgres_changes', {event:'*',schema:'public',table:'planejamento_lotes'}, carregarTudo)
+  .on('postgres_changes', {event:'*',schema:'public',table:'containers'}, carregarTudo)
+  .on('postgres_changes', {event:'*',schema:'public',table:'processos_lote'}, carregarTudo)
+  .on('postgres_changes', {event:'*',schema:'public',table:'historico_eventos'}, carregarTudo)
+  .subscribe();
+</script>
+</body>
+</html>
